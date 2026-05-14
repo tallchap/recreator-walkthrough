@@ -3,21 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Recreator — a full 10-iteration walkthrough</title>
+<title>Recreator — walkthrough</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#0c1322; color:#dfe6f3; margin:0; line-height:1.55; }
   .wrap { max-width:960px; margin:0 auto; padding:28px 22px 60px; }
   h1 { margin:0 0 4px; font-size:30px; letter-spacing:-.01em; }
-  h2 { margin:40px 0 6px; font-size:21px; color:#cfe; }
+  h2 { margin:46px 0 6px; font-size:21px; color:#cfe; }
   h2 .num { color:#6b7fa8; font-weight:700; margin-right:8px; }
+  h3 { margin:18px 0 6px; font-size:15px; color:#9fb0cb; font-weight:600; text-transform:uppercase; letter-spacing:.06em; }
   .sub { color:#9fb0cb; font-size:14.5px; margin:0 0 6px; }
   a { color:#6fd0ff; }
   code, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
   .card { background:#131d33; border:1px solid #25406f; border-radius:12px; padding:18px 18px; margin-top:16px; }
   .pill { display:inline-block; background:#1a2a4a; border:1px solid #2b4575; border-radius:999px; padding:3px 10px; font-size:12px; color:#aec3e6; }
   .pill.good { background:#14532d; border-color:#1f7a3f; color:#9af0b8; }
+  .pill.warn { background:#713f12; border-color:#a05a16; color:#fde68a; }
   img { max-width:100%; display:block; border-radius:8px; }
   .two { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   @media (max-width:680px){ .two { grid-template-columns:1fr; } }
@@ -41,105 +43,137 @@
 <body>
 <div class="wrap">
 
-  <h1>Recreator — a full 10-iteration walkthrough</h1>
-  <p class="sub">An automated browser drove the live <a href="https://recreator-608847010104.us-central1.run.app/recreator" target="_blank">recreator</a> through a complete <b>10-iteration run</b> on the thumbnail of <a href="https://youtu.be/ZFoNBxpXen4" target="_blank">youtu.be/ZFoNBxpXen4</a> — then the resulting <b>prompt + face reference</b> were fed back to Gemini, independently, to see if they reproduce the image. Below: the run (timelapse + frame-by-frame scrubber), the deliverable, and the independent reproduction.</p>
+  <h1>Recreator — walkthrough</h1>
+  <p class="sub">An automated browser drove the live <a href="https://recreator-608847010104.us-central1.run.app/recreator" target="_blank">recreator</a> through full <b>10-iteration runs</b> on two different inputs — one 16:9 YouTube thumbnail, one 4:3 photo — then the resulting <b>prompt + face reference</b> were fed back to Gemini independently to see if they reproduce the image. Below: how it works, then each run (timelapse + frame-by-frame scrubber + the deliverable + the independent reproduction).</p>
 
   <h2><span class="num">1</span>What recreator does</h2>
   <div class="card">
-    <p style="margin-top:0">You give it an image (or a YouTube link — it fetches the thumbnail). It runs a loop: <b>AWS Rekognition</b> crops the face(s) → <b>Claude</b> writes a text-to-image prompt for everything else → <b>Gemini</b> (<span class="mono">gemini-3.1-flash-image-preview</span>) generates a 16:9 image from <span class="mono">[prompt] + [face crop(s)]</span> → <b>Claude</b> judges it 0–100 → a <b>GPT-5.5 analyst</b> says which prompt phrasings worked / which didn't and grows a "learnings ledger" → Claude rewrites the next prompt from the closest attempt so far + that ledger → repeat, up to 10×. The deliverable is the winning <b>prompt</b> + the <b>reference face crop(s)</b> — that pair, fed to a text-to-image model, reproduces the result.</p>
+    <p style="margin-top:0">You give it an image (any aspect ratio) or a YouTube link (it fetches the thumbnail). It runs a loop: <b>AWS Rekognition</b> crops the face(s) → <b>Claude</b> writes a text-to-image prompt for everything else → <b>Gemini</b> (<span class="mono">gemini-3.1-flash-image-preview</span>) generates an image at the matched aspect ratio from <span class="mono">[prompt] + [face crop(s)]</span> → <b>Claude</b> judges it 0–100 → a <b>GPT-5.5 analyst</b> says which prompt phrasings worked / which didn't and grows a "learnings ledger" → Claude rewrites the next prompt from the closest attempt so far + that ledger → repeat, up to 10×. The deliverable is the winning <b>prompt</b> + the <b>reference face crop(s)</b> — that pair, fed to a text-to-image model, reproduces the result.</p>
   </div>
 
-  <h2><span class="num">2</span>The 10-iteration run</h2>
-  <p class="sub">Source thumbnail: <a href="https://youtu.be/ZFoNBxpXen4" target="_blank">youtu.be/ZFoNBxpXen4</a> · run took ~16 min · result: <span class="pill good">best 78% — won on iteration 10</span> <span class="pill">judge threshold 90%, so "best effort"</span></p>
+  <h2><span class="num">2</span>Run 1 — MrBeast (16:9 YouTube thumbnail)</h2>
+  <p class="sub">Source: <a href="https://youtu.be/ZFoNBxpXen4" target="_blank">youtu.be/ZFoNBxpXen4</a> · run took ~16 min · <span class="pill good">best 78% — won iteration 10</span> <span class="pill">output aspect 16:9</span></p>
   <div class="card">
     <figcaption>timelapse (16 min → ~7 s)</figcaption>
-    <img class="gif" src="run_timelapse.gif" alt="timelapse of the 10-iteration recreator run">
+    <img class="gif" src="run_timelapse.gif" alt="timelapse of the MrBeast 10-iteration run">
     <div class="scrub" style="margin-top:18px;">
-      <figcaption>scrub the run frame-by-frame</figcaption>
-      <img id="frame" src="frames/f_000.jpg" alt="run frame">
+      <figcaption>scrub frame-by-frame</figcaption>
+      <img id="frame1" src="frames/f_000.jpg" alt="run frame">
       <div class="row">
-        <button class="btn" id="playBtn">▶ play</button>
-        <input type="range" id="slider" min="0" max="96" value="0">
-        <span id="frameLabel">frame 1 / 97</span>
+        <button class="btn" data-play="1">▶ play</button>
+        <input type="range" id="slider1" min="0" max="96" value="0">
+        <span id="label1">frame 1 / 97</span>
       </div>
     </div>
-    <div class="scores" id="scores"></div>
-    <p class="note">Judge scores per iteration. They bounce — Gemini renders the same prompt slightly differently each time, and a prompt edit that fixes one thing can nick another — but the loop always keeps and returns the <b>best</b> attempt (iteration 10 here, 78%).</p>
-  </div>
+    <div class="scores" id="scores1"></div>
 
-  <h2><span class="num">3</span>The deliverable</h2>
-  <div class="card">
+    <h3>The deliverable</h3>
     <div class="two">
-      <figure><figcaption>original (YouTube thumbnail)</figcaption><img src="original.jpg" alt="original thumbnail"></figure>
-      <figure><figcaption>recreator's winning recreation (iteration 10, 78%)</figcaption><img src="final_loop.jpg" alt="recreator final image"></figure>
+      <figure><figcaption>original</figcaption><img src="original.jpg" alt="MrBeast thumbnail"></figure>
+      <figure><figcaption>recreator (iter 10, 78%)</figcaption><img src="final_loop.jpg" alt="recreator final"></figure>
     </div>
-    <div style="margin-top:18px;">
-      <figcaption>the winning prompt <button class="btn" id="copyBtn" style="margin-left:8px;">copy</button> <a class="btn" id="dlBtn" href="recreation_prompt.txt" download="recreation_prompt.txt" style="text-decoration:none;">download .txt</a></figcaption>
-      <pre class="prompt" id="prompt">loading…</pre>
+    <div style="margin-top:14px;">
+      <figcaption>the winning prompt <button class="btn" data-copy="1" style="margin-left:8px;">copy</button> <a class="btn" href="recreation_prompt.txt" download="recreation_prompt.txt" style="text-decoration:none;">download .txt</a></figcaption>
+      <pre class="prompt" id="prompt1">loading…</pre>
     </div>
-    <div style="margin-top:18px; display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
-      <figure style="max-width:200px;"><figcaption>face reference crop</figcaption><img src="face_ref_1.jpg" alt="face reference crop"></figure>
-      <p class="note" style="max-width:520px;">This crop (cut out of the original by AWS Rekognition) was fed to Gemini <i>alongside</i> the prompt — a text prompt can't pin down a specific person's face, so the crop carries the likeness while the prompt carries composition, objects, colors, text, style.</p>
+    <div style="margin-top:14px; display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">
+      <figure style="max-width:180px;"><figcaption>face reference</figcaption><img src="face_ref_1.jpg" alt="face crop"></figure>
+      <p class="note" style="max-width:520px;">This crop (cut by AWS Rekognition) was fed to Gemini <i>alongside</i> the prompt — text can't pin down a specific face, so the crop carries the likeness while the prompt carries the rest.</p>
     </div>
-  </div>
 
-  <h2><span class="num">4</span>Independent reproduction</h2>
-  <p class="sub">Take <b>only</b> the winning prompt + the face crop above — feed them to Gemini in one fresh, standalone call (no loop, no judge, no analyst). If the deliverable is real, the output should look like the original.</p>
-  <div class="card">
+    <h3>Independent reproduction</h3>
+    <p class="sub" style="margin-bottom:8px;">Take <b>only</b> the prompt + the face crop above → one fresh Gemini call (no loop):</p>
     <div class="two">
       <figure><figcaption>original</figcaption><img src="original.jpg" alt="original"></figure>
-      <figure><figcaption>independent reproduction — prompt + face crop → Gemini, once</figcaption><img src="independent_repro.jpg" alt="independent reproduction"></figure>
+      <figure><figcaption>standalone Gemini call</figcaption><img src="independent_repro.jpg" alt="independent reproduction"></figure>
     </div>
-    <p class="note">Reproduced via a direct call to <span class="mono">gemini-3.1-flash-image-preview</span> with exactly the two artifacts above. (Same thing works by pasting the prompt + uploading the face crop into Google AI Studio's image playground — the "Nano Banana" / Gemini-image models.)</p>
+  </div>
+
+  <h2><span class="num">3</span>Run 2 — Kim Jong Un photo (4:3, non-16:9)</h2>
+  <p class="sub">Source: a 1672×1258 photo → snapped to <span class="mono">4:3</span> automatically · run captured 7 iterations (then Gemini refused iter 8 on a safety filter for the political-figure likeness) · <span class="pill good">best 78% — tied across iters 3–7</span> <span class="pill">output aspect 4:3</span></p>
+  <div class="card">
+    <figcaption>timelapse (~14 min → ~3 s)</figcaption>
+    <img class="gif" src="run_timelapse_kim.gif" alt="timelapse of the Kim 7-iteration run">
+    <div class="scrub" style="margin-top:18px;">
+      <figcaption>scrub frame-by-frame</figcaption>
+      <img id="frame2" src="frames_kim/f_000.jpg" alt="run frame">
+      <div class="row">
+        <button class="btn" data-play="2">▶ play</button>
+        <input type="range" id="slider2" min="0" max="168" value="0">
+        <span id="label2">frame 1 / 169</span>
+      </div>
+    </div>
+    <div class="scores" id="scores2"></div>
+    <p class="note">This is the new feature: the input is 4:3 (1672×1258), and Gemini produced 4:3 (1200×896) — no hardcoded 16:9. Iter 8 hit a Gemini safety refusal (<span class="mono">finish_reason=NO_IMAGE</span>) on the Kim likeness; iters 1–7 succeeded and converged on 78%.</p>
+
+    <h3>The deliverable</h3>
+    <div class="two">
+      <figure><figcaption>original (4:3)</figcaption><img src="original_kim.jpg" alt="Kim Jong Un photo"></figure>
+      <figure><figcaption>recreator (iter 7, 78%)</figcaption><img src="final_loop_kim.jpg" alt="recreator final"></figure>
+    </div>
+    <div style="margin-top:14px;">
+      <figcaption>the winning prompt <button class="btn" data-copy="2" style="margin-left:8px;">copy</button> <a class="btn" href="recreation_prompt_kim.txt" download="recreation_prompt_kim.txt" style="text-decoration:none;">download .txt</a></figcaption>
+      <pre class="prompt" id="prompt2">loading…</pre>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">
+      <figure style="max-width:180px;"><figcaption>face reference</figcaption><img src="face_ref_1_kim.jpg" alt="Kim face crop"></figure>
+      <p class="note" style="max-width:520px;">Rekognition cropped Kim's face accurately from the 4:3 input.</p>
+    </div>
+
+    <h3>Independent reproduction</h3>
+    <p class="sub" style="margin-bottom:8px;">Take <b>only</b> the prompt + the face crop → one fresh Gemini call at aspect 4:3 (no loop):</p>
+    <div class="two">
+      <figure><figcaption>original</figcaption><img src="original_kim.jpg" alt="original"></figure>
+      <figure><figcaption>standalone Gemini call</figcaption><img src="independent_repro_kim.jpg" alt="independent reproduction"></figure>
+    </div>
   </div>
 
   <div class="footer">
-    Built by <a href="https://recreator-608847010104.us-central1.run.app/recreator" target="_blank">recreator</a> (live · build <span class="mono">efe894d</span>) · source <a href="https://github.com/tallchap/recreator" target="_blank">tallchap/recreator</a> · this page <a href="https://github.com/tallchap/recreator-walkthrough" target="_blank">tallchap/recreator-walkthrough</a>
+    Built by <a href="https://recreator-608847010104.us-central1.run.app/recreator" target="_blank">recreator</a> (live · build <span class="mono">a458da3</span>) · source <a href="https://github.com/tallchap/recreator" target="_blank">tallchap/recreator</a> · this page <a href="https://github.com/tallchap/recreator-walkthrough" target="_blank">tallchap/recreator-walkthrough</a>
   </div>
 
 </div>
 
 <script>
 (function () {
-  var FRAMES = 97;
-  var SCORES = [62,72,62,62,62,68,68,72,55,78];
-  var WIN_ITER = 10, WIN_SCORE = 78;
-  var frame = document.getElementById('frame');
-  var slider = document.getElementById('slider');
-  var label = document.getElementById('frameLabel');
-  slider.max = FRAMES - 1;
+  // Run 1
+  setupRun(1, { frames: 97, dir: 'frames/', scores: [62,72,62,62,62,68,68,72,55,78], winIter: 10, promptUrl: 'recreation_prompt.txt' });
+  // Run 2 (Kim — 7 successful iterations, then Gemini refused iter 8)
+  setupRun(2, { frames: 169, dir: 'frames_kim/', scores: [62,72,78,78,78,78,78], winIter: 7, promptUrl: 'recreation_prompt_kim.txt' });
+
   function pad(n){ return ('00'+n).slice(-3); }
-  function show(i){ frame.src = 'frames/f_' + pad(i) + '.jpg'; label.textContent = 'frame ' + (i+1) + ' / ' + FRAMES; }
-  slider.addEventListener('input', function(){ show(parseInt(slider.value,10)); });
-  var playing = false, timer = null;
-  document.getElementById('playBtn').addEventListener('click', function(){
-    playing = !playing;
-    this.textContent = playing ? '⏸ pause' : '▶ play';
-    if (playing) {
-      timer = setInterval(function(){
-        var i = (parseInt(slider.value,10) + 1) % FRAMES;
-        slider.value = i; show(i);
-      }, 220);
-    } else { clearInterval(timer); }
-  });
-  // scores
-  var sc = document.getElementById('scores');
-  SCORES.forEach(function(v, idx){
-    var d = document.createElement('span');
-    d.className = 's' + ((idx+1) === WIN_ITER ? ' win' : '');
-    d.innerHTML = '<b>iter ' + (idx+1) + '</b>' + v + '%' + ((idx+1) === WIN_ITER ? ' ★' : '');
-    sc.appendChild(d);
-  });
-  // prompt text
-  fetch('recreation_prompt.txt').then(function(r){ return r.text(); }).then(function(t){
-    document.getElementById('prompt').textContent = t;
-    document.getElementById('copyBtn').onclick = function(){
-      navigator.clipboard.writeText(t).then(function(){
-        var b = document.getElementById('copyBtn'); var o = b.textContent; b.textContent = 'copied!';
-        setTimeout(function(){ b.textContent = o; }, 1400);
-      });
-    };
-  }).catch(function(){ document.getElementById('prompt').textContent = '(could not load recreation_prompt.txt)'; });
+
+  function setupRun(id, cfg) {
+    var frame = document.getElementById('frame'+id);
+    var slider = document.getElementById('slider'+id);
+    var label = document.getElementById('label'+id);
+    slider.max = cfg.frames - 1;
+    function show(i){ frame.src = cfg.dir + 'f_' + pad(i) + '.jpg'; label.textContent = 'frame ' + (i+1) + ' / ' + cfg.frames; }
+    slider.addEventListener('input', function(){ show(parseInt(slider.value,10)); });
+    var playing = false, timer = null;
+    document.querySelector('[data-play="'+id+'"]').addEventListener('click', function(){
+      playing = !playing;
+      this.textContent = playing ? '⏸ pause' : '▶ play';
+      if (playing) timer = setInterval(function(){ var i=(parseInt(slider.value,10)+1)%cfg.frames; slider.value=i; show(i); }, 220);
+      else clearInterval(timer);
+    });
+    var sc = document.getElementById('scores'+id);
+    cfg.scores.forEach(function(v, idx){
+      var d = document.createElement('span');
+      d.className = 's' + ((idx+1) === cfg.winIter ? ' win' : '');
+      d.innerHTML = '<b>iter ' + (idx+1) + '</b>' + v + '%' + ((idx+1) === cfg.winIter ? ' ★' : '');
+      sc.appendChild(d);
+    });
+    fetch(cfg.promptUrl).then(function(r){ return r.text(); }).then(function(t){
+      document.getElementById('prompt'+id).textContent = t;
+      document.querySelector('[data-copy="'+id+'"]').onclick = function(){
+        navigator.clipboard.writeText(t).then(function(){
+          var b = document.querySelector('[data-copy="'+id+'"]'); var o=b.textContent; b.textContent='copied!';
+          setTimeout(function(){ b.textContent=o; }, 1400);
+        });
+      };
+    }).catch(function(){ document.getElementById('prompt'+id).textContent='(could not load ' + cfg.promptUrl + ')'; });
+  }
 })();
 </script>
 </body>
